@@ -56,17 +56,32 @@ class Map extends React.Component {
                             visited.push(curRoom)
                             console.log(visited)
                             // visited.push(curRoom)
-                            this.move(direction)
-                            let nextRoom = JSON.parse(localStorage.getItem("nextRoom"))
-                            console.log("line 61", nextRoom)
-                            let nextRoomId = nextRoom.room_id
+                            // let nextRoom = setTimeout(this.move(direction), 30000);
+                            // let nextRoom = this.move(direction)
+                            console.log("current direction, line 61", direction)
+                            axios.post(" https://lambda-treasure-hunt.herokuapp.com/api/adv/move/", 
+                            {"direction": direction}, {headers: { 'Authorization': `Token ${this.state.userToken}`} }).
+                            then(response => {
+                                
+                                console.log("Our", response.data)
+                                let nextRoom = response.data;
+                                console.log("what is nextRoom", nextRoom)
+                                let nextRoomId = nextRoom.room_id
+                                console.log("line 63", nextRoomId)
+    
+                                newGraph[nextRoomId] = {"n": "?", "s": "?", "w": "?", "e": "?"} 
+                                let oppositeDirection = this.getOppositeDirections(direction)
+                                newGraph[nextRoomId][oppositeDirection] = curRoom
+    
+                                newGraph[curRoom][direction] = nextRoom.room_id
+                                curRoom = nextRoomId
+                                localStorage.setItem("currentRoom", JSON.stringify(nextRoom))
 
-                            newGraph[nextRoomId] = this.refactorRooms(nextRoom.exits)
-                            newGraph[nextRoomId][direction] = this.getOppositeDirections(direction)
-
-                            newGraph[curRoom][direction] = nextRoom.room_id
-                            curRoom = nextRoomId
-                            localStorage.setItem("currentRoom", JSON.stringify(nextRoom))
+                            })
+                            .catch(err => {
+                                console.log("We have hit an error");
+                                console.log(err);
+                            })
                             break
                         }
                         else if (newGraph[curRoom][direction] == "?" && !directions.includes(direction)) {
@@ -81,32 +96,40 @@ class Map extends React.Component {
                     while (queue.length > 0) {
                         curRoom = queue.shift()
                         if (visited.includes(curRoom)) {
-                            // let directions = JSON.parse(localStorage.getItem("currentRoom")).exits;
-                            // let cooldownTime = JSON.parse(localStorage.getItem("currentRoom")).cooldown;
-                            // console.log(cooldownTime)
                             console.log(curRoom)
 
                             for (let direction in newGraph[curRoom]) {
                                 if (newGraph[curRoom][direction] == "?" && directions.includes(direction))
                                 {
-                                    visited.push(curRoom)
-                                    this.move(direction)
-                                    let nextRoom = JSON.parse(localStorage.getItem("nextRoom"))
-                                    console.log(nextRoom)
-                                    let nextRoomId = nextRoom.room_id
-
-                                    newGraph[nextRoomId] = this.refactorRooms(nextRoom.exits)
-                                    newGraph[nextRoomId][direction] = this.getOppositeDirections(direction)
-
-                                    newGraph[curRoom][direction] = nextRoom.room_id
-                                    let curRoom = nextRoomId
-                                    localStorage.setItem("currentRoom", JSON.stringify(nextRoom))
-                                    break
+                                    console.log("Current direction, line 115", direction)
+                                    axios.post(" https://lambda-treasure-hunt.herokuapp.com/api/adv/move/", 
+                                    {"direction": direction}, {headers: { 'Authorization': `Token ${this.state.userToken}`} }).
+                                    then(response => {
+                                        console.log("Our", response.data)
+                                        let nextRoom = response.data;
+                                        console.log("what is nextRoom", nextRoom)
+                                        let nextRoomId = nextRoom.room_id
+                                        console.log("line 63", nextRoomId)
+            
+                                        newGraph[nextRoomId] = {"n": "?", "s": "?", "w": "?", "e": "?"} 
+                                        let oppositeDirection = this.getOppositeDirections(direction)
+                                        newGraph[nextRoomId][oppositeDirection] = curRoom
+            
+                                        newGraph[curRoom][direction] = nextRoom.room_id
+                                        curRoom = nextRoomId
+                                        localStorage.setItem("currentRoom", JSON.stringify(nextRoom))
+        
+                                    })
+                                    .catch(err => {
+                                        console.log("We have hit an error");
+                                        console.log(err);
+                                    })
+                                    break 
                                 }
                                 else if (!directions.includes(direction)) 
                                 {
                                     newGraph[curRoom][direction] = "" 
-                                }
+                                }  
                                 else if (newGraph[curRoom][direction] != "?")
                                 {
                                     let bfs_roomId = newGraph[curRoom][direction]
@@ -125,14 +148,6 @@ class Map extends React.Component {
         }
     }
 
-    refactorRooms = arr => {
-        let newDict = {}
-        for (let direction in arr) {
-            newDict[direction] = "?" 
-        } 
-        return newDict
-    }
-
     getOppositeDirections = (dir) => {
         if (dir == "n") {
             return "s";
@@ -148,18 +163,17 @@ class Map extends React.Component {
         }
     } 
     
-    async move(dir) {
-        try {
-            const response = await axios.post(" https://lambda-treasure-hunt.herokuapp.com/api/adv/move/", 
-            {"direction": dir}, {headers: { 'Authorization': `Token ${this.state.userToken}`} });
-            const currentRoom =  JSON.stringify(response.data);
-            localStorage.setItem("nextRoom", currentRoom);
-            let test = localStorage.getItem("nextRoom");
-            console.log("test next room", test)
-        }
-        catch(err) {
-            console.log(err);
-        }
+    move = (dir) => {
+            axios.post(" https://lambda-treasure-hunt.herokuapp.com/api/adv/move/", 
+            {"direction": dir}, {headers: { 'Authorization': `Token ${this.state.userToken}`} }).
+            then(response => {
+                console.log("Our", response.data)
+                return JSON.stringify(response.data);
+            })
+            .catch(err => {
+                console.log("We have hit an error");
+                console.log(err);
+            })
     }
 
     render() {
